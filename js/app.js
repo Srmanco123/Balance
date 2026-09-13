@@ -1,4 +1,5 @@
-import { alCambiarSesion, entrar, resultadoRedireccion } from "./data/firebase.js";
+import { alCambiarSesion, entrar, resultadoRedireccion, usuario } from "./data/firebase.js";
+import { leerPerfil } from "./data/repo.js";
 import { MODULOS } from "./config.js";
 
 import * as hoy from "./views/hoy.js";
@@ -6,8 +7,9 @@ import * as comida from "./views/comida.js";
 import * as entreno from "./views/entreno.js";
 import * as progreso from "./views/progreso.js";
 import * as ajustes from "./views/ajustes.js";
+import * as perfil from "./views/perfil.js";
 
-const VISTAS = { hoy, comida, entreno, progreso, ajustes };
+const VISTAS = { hoy, comida, entreno, progreso, ajustes, perfil };
 
 const PESTANAS = [
   { id: "hoy", glifo: "◐", activa: true },
@@ -72,19 +74,42 @@ resultadoRedireccion().catch((error) => {
     "No se ha podido iniciar sesión: " + (error.code || error.message);
 });
 
+async function arrancar() {
+  pintarBarra();
+  let datos = null;
+  try {
+    datos = await leerPerfil(usuario().uid);
+  } catch (error) {
+    console.warn("No se ha podido leer el perfil", error);
+  }
+
+  if (datos) {
+    ir("hoy");
+    return;
+  }
+
+  // Primera vez: alta de datos antes de nada. Sin barra hasta terminar.
+  barra.classList.add("oculto");
+  rotulo.textContent = perfil.titulo;
+  actual = "perfil";
+  caja.innerHTML = "";
+  perfil.mount(caja, () => {
+    barra.classList.remove("oculto");
+    ir("hoy");
+  });
+}
+
 alCambiarSesion((u) => {
   if (u) {
     acceso.classList.add("oculto");
     aplicacion.classList.remove("oculto");
-    if (!actual) {
-      pintarBarra();
-      ir("hoy");
-    }
+    if (!actual) arrancar();
   } else {
     if (actual && VISTAS[actual].unmount) VISTAS[actual].unmount();
     actual = null;
     aplicacion.classList.add("oculto");
     acceso.classList.remove("oculto");
+    barra.classList.remove("oculto");
     document.querySelector("#entrar").disabled = false;
   }
 });
