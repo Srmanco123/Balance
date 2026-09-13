@@ -238,3 +238,39 @@ nav button:disabled { opacity: 0.35; }
 }
 
 form .boton { margin-top: 4px; }
+
+/* ---------- Tarjetas de Hoy ---------- */
+
+.etiqueta { margin: 0 0 4px; color: var(--apagado); font-size: 14px; }
+
+.cifra {
+  margin: 0;
+  font-size: 38px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+
+.cifra span { font-size: 16px; font-weight: 400; color: var(--apagado); letter-spacing: 0; }
+
+.macros { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 10px; font-size: 14px; }
+.macros span { display: inline-flex; align-items: center; gap: 6px; color: var(--apagado); }
+.macros i { width: 9px; height: 9px; border-radius: 2px; display: inline-block; }
+
+.fila { display: flex; gap: 10px; align-items: stretch; }
+.fila input {
+  flex: 1;
+  min-width: 0;
+  padding: 13px 14px;
+  background: var(--fondo);
+  border: 1px solid var(--linea);
+  border-radius: 10px;
+  color: var(--texto);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  -webkit-appearance: none;
+}
+.fila input:focus { outline: 2px solid var(--acento); outline-offset: 1px; }
+.fila .boton { width: auto; flex: 0 0 auto; margin-top: 0; }
+
+.historial { margin-top: 14px; border-top: 1px solid var(--linea); padding-top: 6px; }
+.historial .dato { font-size: 14px; }
