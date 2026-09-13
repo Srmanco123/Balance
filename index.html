@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Balance</title>
+
+<link rel="manifest" href="./manifest.json">
+<link rel="stylesheet" href="./css/estilo.css">
+<link rel="apple-touch-icon" href="./apple-touch-icon.png">
+
+<meta name="theme-color" content="#14161A">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Balance">
+</head>
+<body>
+
+<section class="acceso" id="acceso">
+  <div class="marca">
+    <div class="mecha" aria-hidden="true"><i></i><i></i></div>
+    <h1>Balance</h1>
+    <p>Peso, comida y entrenos en un solo sitio, ajustados a lo que de verdad gastas.</p>
+  </div>
+  <button class="boton boton--principal" id="entrar">Entrar con Google</button>
+  <p class="aviso" id="aviso" role="alert"></p>
+</section>
+
+<div id="aplicacion" class="oculto" style="display:contents">
+  <header>
+    <h1 id="titulo">Hoy</h1>
+    <button class="iconico" id="ajustes" aria-label="Ajustes">Ajustes</button>
+  </header>
+
+  <main id="contenido"></main>
+
+  <nav aria-label="Secciones"></nav>
+</div>
+
+<script type="module" src="./js/app.js"></script>
+</body>
+</html>
