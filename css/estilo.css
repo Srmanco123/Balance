@@ -1,0 +1,193 @@
+:root {
+  --fondo: #14161a;
+  --superficie: #1c1f24;
+  --linea: #272b32;
+  --texto: #e9e7e2;
+  --apagado: #8a9199;
+  --acento: #d8a657;
+  --proteina: #6fa8c7;
+  --hidratos: #d8a657;
+  --grasa: #b0748f;
+  --bien: #6fa87c;
+  --mal: #c4695c;
+  --barra: 56px;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--fondo);
+  color: var(--texto);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior-y: none;
+}
+
+body { display: flex; flex-direction: column; }
+
+.numero { font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+
+/* ---------- Cabecera ---------- */
+
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: calc(env(safe-area-inset-top) + 14px) 20px 12px;
+  border-bottom: 1px solid var(--linea);
+}
+
+header h1 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.iconico {
+  background: none;
+  border: 0;
+  color: var(--apagado);
+  font-size: 15px;
+  padding: 6px 4px;
+  cursor: pointer;
+}
+
+.iconico:focus-visible { outline: 2px solid var(--acento); border-radius: 6px; }
+
+/* ---------- Contenido ---------- */
+
+main {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 20px 20px calc(var(--barra) + env(safe-area-inset-bottom) + 24px);
+}
+
+.vacio {
+  color: var(--apagado);
+  max-width: 34ch;
+  margin-top: 8vh;
+}
+
+.vacio strong { color: var(--texto); font-weight: 600; display: block; margin-bottom: 6px; }
+
+.tarjeta {
+  background: var(--superficie);
+  border: 1px solid var(--linea);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 14px;
+}
+
+.dato { display: flex; justify-content: space-between; gap: 16px; padding: 6px 0; }
+.dato span:first-child { color: var(--apagado); }
+.dato code {
+  font-size: 13px;
+  word-break: break-all;
+  text-align: right;
+  color: var(--texto);
+}
+
+/* ---------- Botones ---------- */
+
+.boton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 14px 18px;
+  border: 1px solid var(--linea);
+  border-radius: 12px;
+  background: var(--superficie);
+  color: var(--texto);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.boton--principal { background: var(--acento); color: #191510; border-color: transparent; }
+.boton:active { opacity: 0.75; }
+.boton:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
+
+/* ---------- Barra de pestañas ---------- */
+
+nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  background: rgba(20, 22, 26, 0.94);
+  backdrop-filter: saturate(160%) blur(14px);
+  border-top: 1px solid var(--linea);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+nav button {
+  flex: 1;
+  height: var(--barra);
+  background: none;
+  border: 0;
+  color: var(--apagado);
+  font: inherit;
+  font-size: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  cursor: pointer;
+}
+
+nav button .glifo { font-size: 17px; line-height: 1; }
+nav button[aria-current="page"] { color: var(--texto); }
+nav button:disabled { opacity: 0.35; }
+
+/* ---------- Acceso ---------- */
+
+.acceso {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 0 28px;
+  gap: 28px;
+}
+
+.marca { display: flex; flex-direction: column; gap: 14px; }
+.marca h1 { margin: 0; font-size: 40px; font-weight: 600; letter-spacing: -0.03em; }
+.marca p { margin: 0; color: var(--apagado); max-width: 28ch; }
+
+.mecha { display: flex; width: 120px; height: 6px; border-radius: 3px; overflow: hidden; }
+.mecha i { display: block; height: 100%; }
+.mecha i:nth-child(1) { width: 62%; background: var(--acento); }
+.mecha i:nth-child(2) { width: 38%; background: var(--linea); }
+
+.acceso .boton { max-width: 320px; }
+
+.aviso { color: var(--mal); font-size: 14px; max-width: 34ch; }
+
+/* ---------- Cámara ---------- */
+
+.visor {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  background: #000;
+  border: 1px solid var(--linea);
+  border-radius: 12px;
+  object-fit: cover;
+  margin-bottom: 14px;
+}
+
+.oculto { display: none !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}
