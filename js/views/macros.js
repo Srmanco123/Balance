@@ -33,13 +33,21 @@ async function pintar(caja) {
     </p>
 
     <div class="campo">
-      <label for="prot">Proteína — <span id="vProt"></span> g/kg</label>
-      <input type="range" id="prot" min="1.2" max="3" step="0.1" value="${perfil.proteinaPorKilo}">
+      <label>Proteína por kilo de peso</label>
+      <div class="paso">
+        <button type="button" class="paso__b" data-ajusta="prot" data-delta="-1" aria-label="Bajar proteína">−</button>
+        <span class="paso__v numero"><span id="vProt"></span> g/kg</span>
+        <button type="button" class="paso__b" data-ajusta="prot" data-delta="1" aria-label="Subir proteína">+</button>
+      </div>
     </div>
 
     <div class="campo">
-      <label for="gras">Grasa — <span id="vGras"></span> g/kg</label>
-      <input type="range" id="gras" min="0.4" max="1.5" step="0.05" value="${perfil.grasaPorKilo}">
+      <label>Grasa por kilo de peso</label>
+      <div class="paso">
+        <button type="button" class="paso__b" data-ajusta="gras" data-delta="-1" aria-label="Bajar grasa">−</button>
+        <span class="paso__v numero"><span id="vGras"></span> g/kg</span>
+        <button type="button" class="paso__b" data-ajusta="gras" data-delta="1" aria-label="Subir grasa">+</button>
+      </div>
     </div>
 
     <div class="tarjeta" id="reparto"></div>
@@ -49,12 +57,35 @@ async function pintar(caja) {
     <button class="boton boton--principal" id="guardar">Guardar reparto</button>
   `;
 
-  const prot = caja.querySelector("#prot");
-  const gras = caja.querySelector("#gras");
+  // Botones en vez de deslizadores: en iOS los controles de rango se pelean con
+  // el gesto de desplazamiento y acaban siendo imposibles de mover con el dedo.
+  const LIMITES = {
+    prot: { min: 1.2, max: 3, paso: 0.1, decimales: 1 },
+    gras: { min: 0.4, max: 1.5, paso: 0.05, decimales: 2 }
+  };
+
+  const valores = {
+    prot: Number(perfil.proteinaPorKilo),
+    gras: Number(perfil.grasaPorKilo)
+  };
+
+  function ajustar(cual, pasos) {
+    const l = LIMITES[cual];
+    const bruto = valores[cual] + pasos * l.paso;
+    const acotado = Math.min(l.max, Math.max(l.min, bruto));
+    valores[cual] = Number(acotado.toFixed(l.decimales + 1));
+    refrescar();
+  }
+
+  caja.querySelectorAll("[data-ajusta]").forEach((boton) => {
+    boton.addEventListener("click", () =>
+      ajustar(boton.dataset.ajusta, Number(boton.dataset.delta))
+    );
+  });
 
   function refrescar() {
-    const proteinaPorKilo = Number(prot.value);
-    const grasaPorKilo = Number(gras.value);
+    const proteinaPorKilo = valores.prot;
+    const grasaPorKilo = valores.gras;
     const activo = { ...perfil, proteinaPorKilo, grasaPorKilo };
     const objetivo = objetivoInicial(activo);
     const m = repartoMacros(objetivo, activo);
@@ -97,8 +128,6 @@ async function pintar(caja) {
     return { proteinaPorKilo, grasaPorKilo };
   }
 
-  prot.addEventListener("input", refrescar);
-  gras.addEventListener("input", refrescar);
   refrescar();
 
   caja.querySelector("#guardar").addEventListener("click", async (evento) => {
