@@ -8,8 +8,9 @@ import * as entreno from "./views/entreno.js";
 import * as progreso from "./views/progreso.js";
 import * as ajustes from "./views/ajustes.js";
 import * as perfil from "./views/perfil.js";
+import * as macros from "./views/macros.js";
 
-const VISTAS = { hoy, comida, entreno, progreso, ajustes, perfil };
+const VISTAS = { hoy, comida, entreno, progreso, ajustes, perfil, macros };
 
 const PESTANAS = [
   { id: "hoy", glifo: "◐", activa: true },
@@ -67,6 +68,10 @@ document.querySelector("#entrar").addEventListener("click", async (evento) => {
 });
 
 document.querySelector("#ajustes").addEventListener("click", () => ir("ajustes"));
+
+// Las vistas piden navegación por evento en vez de importar el enrutador:
+// evita dependencias circulares entre app.js y las propias vistas.
+document.addEventListener("balance:ir", (evento) => ir(evento.detail));
 
 // Si la sesión vino por redirección, el error aparece aquí y no en el botón.
 resultadoRedireccion().catch((error) => {

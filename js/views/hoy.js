@@ -27,6 +27,9 @@ async function pintar(caja) {
   const deHoy = pesos.find((p) => p.fecha === hoy);
   const objetivo = objetivoInicial(perfil);
   const macros = repartoMacros(objetivo, perfil);
+  const gasto = gastoInicial(perfil);
+  const enElSuelo = objetivo <= perfil.sueloKcal;
+  const ritmoReal = Math.round((((gasto - objetivo) * 7) / 7700) * 100) / 100;
   const tendencia = tendenciaActual(pesos);
   const ritmo = ritmoSemanal(pesos);
 
@@ -39,8 +42,16 @@ async function pintar(caja) {
         <span><i style="background:var(--hidratos)"></i>${macros.hidratos} g hidratos</span>
         <span><i style="background:var(--grasa)"></i>${macros.grasa} g grasa</span>
       </div>
-      <p class="nota">Estimado sobre un gasto de ${gastoInicial(perfil)} kcal. Se corregirá
-      cuando haya semanas suficientes para medirlo de verdad.</p>
+      <p class="nota">Gasto estimado ${gasto} kcal. Ritmo previsto
+      ${ritmoReal.toFixed(2).replace(".", ",")} kg por semana. Se corregirá cuando haya
+      semanas suficientes para medirlo de verdad.</p>
+      ${
+        enElSuelo
+          ? `<p class="nota aviso--suave">El ritmo que elegiste pedía menos calorías de las que
+             gastas en reposo, así que el objetivo está frenado en tu suelo de
+             ${perfil.sueloKcal} kcal. Bajarás algo más despacio, pero sostenible.</p>`
+          : ""
+      }
     </div>
 
     <div class="tarjeta">

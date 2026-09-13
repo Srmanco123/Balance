@@ -274,3 +274,40 @@ form .boton { margin-top: 4px; }
 
 .historial { margin-top: 14px; border-top: 1px solid var(--linea); padding-top: 6px; }
 .historial .dato { font-size: 14px; }
+
+.aviso--suave {
+  border-left: 2px solid var(--acento);
+  padding-left: 10px;
+  margin-top: 10px;
+}
+
+/* ---------- Deslizadores y barra de reparto ---------- */
+
+input[type="range"] {
+  width: 100%;
+  margin: 6px 0 0;
+  background: transparent;
+  -webkit-appearance: none;
+  touch-action: pan-y; /* iOS: evita que el gesto de scroll secuestre el deslizador */
+}
+
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--linea);
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 26px;
+  height: 26px;
+  margin-top: -11px;
+  border-radius: 50%;
+  background: var(--acento);
+  border: 0;
+}
+
+input[type="range"]:focus-visible { outline: 2px solid var(--acento); outline-offset: 4px; }
+
+.mecha--ancha { width: 100%; height: 10px; border-radius: 5px; margin: 8px 0 12px; }
+.mecha--ancha i { width: auto; }
