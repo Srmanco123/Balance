@@ -1,5 +1,6 @@
 import { usuario, salir } from "../data/firebase.js";
 import { abrir, cerrar } from "../ui/camara.js";
+import { VERSION } from "../config.js";
 
 export const titulo = "Ajustes";
 
@@ -10,6 +11,7 @@ export function mount(caja) {
     <div class="tarjeta">
       <div class="dato"><span>Cuenta</span><code>${u ? u.email : "—"}</code></div>
       <div class="dato"><span>UID</span><code id="uid">${u ? u.uid : "—"}</code></div>
+      <div class="dato"><span>Versión</span><code>${VERSION}</code></div>
       <button class="boton" id="copiar" style="margin-top:12px">Copiar UID</button>
     </div>
 

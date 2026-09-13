@@ -1,11 +1,9 @@
-// Caché mínima del esqueleto. Se amplía cuando haya más vistas.
-const CACHE = "balance-v1";
-const BASE = [
-  "./",
-  "./index.html",
-  "./css/estilo.css",
-  "./manifest.json"
-];
+// Caché mínima del esqueleto.
+// Red primero y SIN pasar por la caché HTTP del navegador: GitHub Pages sirve
+// los archivos con diez minutos de caché, y eso hacía que tras cada despliegue
+// siguiera ejecutándose la versión anterior.
+const CACHE = "balance-v2";
+const BASE = ["./", "./index.html", "./css/estilo.css", "./manifest.json"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(BASE)));
@@ -21,11 +19,16 @@ self.addEventListener("activate", (e) => {
   self.clients.claim();
 });
 
-// Red primero para no servir versiones viejas durante el desarrollo.
 self.addEventListener("fetch", (e) => {
   if (e.request.method !== "GET") return;
+
+  const mismoOrigen = new URL(e.request.url).origin === self.location.origin;
+  const peticion = mismoOrigen
+    ? new Request(e.request.url, { cache: "reload", credentials: "same-origin" })
+    : e.request;
+
   e.respondWith(
-    fetch(e.request)
+    fetch(peticion)
       .then((r) => {
         const copia = r.clone();
         caches.open(CACHE).then((c) => c.put(e.request, copia));
