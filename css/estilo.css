@@ -311,3 +311,40 @@ input[type="range"]:focus-visible { outline: 2px solid var(--acento); outline-of
 
 .mecha--ancha { width: 100%; height: 10px; border-radius: 5px; margin: 8px 0 12px; }
 .mecha--ancha i { width: auto; }
+
+/* ---------- Control de pasos (sustituye a los deslizadores en iOS) ---------- */
+
+.paso {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.paso__b {
+  flex: 0 0 58px;
+  height: 50px;
+  border: 1px solid var(--linea);
+  border-radius: 12px;
+  background: var(--superficie);
+  color: var(--texto);
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.paso__b:active { background: var(--linea); }
+.paso__b:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
+
+.paso__v {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--linea);
+  border-radius: 12px;
+  background: var(--fondo);
+  font-size: 18px;
+  font-weight: 500;
+}
