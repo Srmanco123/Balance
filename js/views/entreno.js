@@ -46,12 +46,16 @@ async function importarDeSalud(uid) {
   try {
     const pendientes = await recoger();
     if (!pendientes.length) return;
-    const guardadas = [];
+    const tratadas = [];
     for (const p of pendientes) {
-      await guardarEntreno(uid, p.entreno);
-      guardadas.push(p.clave);
+      if (p.valido && p.entreno.fecha) {
+        await guardarEntreno(uid, p.entreno);
+      } else {
+        console.warn("Sesión de Salud descartada por venir incompleta", p.entreno);
+      }
+      tratadas.push(p.clave);
     }
-    await confirmar(guardadas);
+    await confirmar(tratadas);
   } catch (error) {
     console.warn("No se ha podido importar de Salud", error);
   }

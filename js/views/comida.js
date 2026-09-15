@@ -10,7 +10,7 @@ import {
 } from "../data/repo.js";
 import { buscar, paraCantidad } from "../services/barcodes.js";
 import { analizar, reescalar, sumar } from "../services/vision.js";
-import { escanear, detener } from "../ui/escaner.js";
+import { escanear, detener, leerDeFoto } from "../ui/escaner.js";
 import { fechaLocal, horaLocal } from "../core/fechas.js";
 
 export const titulo = "Comida";
@@ -238,7 +238,11 @@ function fichaIngredientes(resultado) {
 function panelBarras(panel) {
   panel.innerHTML = `
     <div id="zonaEscaner"></div>
-    <button class="boton boton--principal" id="escanear">Escanear código</button>
+    <button class="boton boton--principal" id="escanear">Escanear en vivo</button>
+    <input type="file" id="fotoCodigo" accept="image/*" capture="environment" hidden>
+    <button class="boton" id="porFoto" style="margin-top:10px">Foto del código</button>
+    <p class="nota">Si el escaneo en vivo se resiste, tira de la foto: la cámara del
+    sistema enfoca mejor de cerca y lee a la primera.</p>
     <div class="campo" style="margin-top:14px">
       <label for="manual">…o teclea el código</label>
       <div class="fila">
@@ -249,6 +253,24 @@ function panelBarras(panel) {
   `;
 
   panel.querySelector("#escanear").addEventListener("click", conCamara);
+
+  const foto = panel.querySelector("#fotoCodigo");
+  panel.querySelector("#porFoto").addEventListener("click", () => foto.click());
+  foto.addEventListener("change", async () => {
+    if (!foto.files || !foto.files[0]) return;
+    avisar("Leyendo el código…");
+    try {
+      const ean = await leerDeFoto(foto.files[0]);
+      if (!ean) {
+        avisar("No se ve el código en esa foto. Acércate más y que salga recto y nítido.");
+        return;
+      }
+      avisar("");
+      resolverCodigo(ean);
+    } finally {
+      foto.value = "";
+    }
+  });
   panel.querySelector("#buscarCodigo").addEventListener("click", () => {
     const ean = panel.querySelector("#manual").value.trim();
     if (ean) resolverCodigo(ean);
@@ -264,7 +286,7 @@ async function conCamara() {
   zona.querySelector("#cancelar").addEventListener("click", detener);
   avisar("");
   try {
-    const ean = await escanear(zona.querySelector("#visor"));
+    const ean = await escanear(zona.querySelector("#visor"), avisar);
     zona.innerHTML = "";
     if (ean) resolverCodigo(ean);
   } catch (error) {

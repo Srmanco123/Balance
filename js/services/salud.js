@@ -35,6 +35,10 @@ export async function recoger() {
 
   return datos.sesiones.map(({ clave, datos: d }) => ({
     clave,
+    // Un atajo mal configurado manda los campos vacíos. Eso no se guarda:
+    // se descarta y se limpia del buzón, o acabaríamos con "Actividad, 0 min"
+    // ensuciando el historial.
+    valido: Boolean(String(d.actividad || "").trim()) && Number(d.duracion) > 0,
     entreno: {
       tipo: "actividad",
       origen: "salud",
@@ -42,7 +46,7 @@ export async function recoger() {
       duracion: Math.round(Number(d.duracion) || 0),
       energia: Number(d.energia) || null,
       fcMedia: Number(d.fc) || null,
-      fecha: d.fecha,
+      fecha: d.fecha || "",
       hora: d.hora || ""
     }
   }));

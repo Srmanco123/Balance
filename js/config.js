@@ -27,4 +27,4 @@ export const ZONA_HORARIA = "Europe/Madrid";
 
 // Se muestra en Ajustes: sirve para saber de un vistazo qué versión está sirviendo
 // GitHub Pages, que cachea diez minutos.
-export const VERSION = "1.2 — entrenos y Salud";
+export const VERSION = "1.4 — escáner y filtro de Salud";

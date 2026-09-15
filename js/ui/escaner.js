@@ -1,13 +1,14 @@
-// Escáner de códigos de barras.
+// Lectura de códigos de barras.
 //
-// Safari no incluye BarcodeDetector, así que hay dos caminos: el detector
-// nativo donde exista (Chrome) y ZXing cargado desde CDN en el resto, que es
-// el caso del iPhone. La entrada manual del código queda siempre disponible
-// como salida de emergencia.
+// Dos caminos, porque en iPhone el escaneo en vivo es frágil:
+//  - En vivo: detector nativo donde exista (Chrome) y ZXing en el resto.
+//  - Por foto: la cámara del sistema enfoca y dispara a resolución completa,
+//    que es justo lo que necesita un EAN. Es la vía fiable en iOS.
 
-const FORMATOS = ["ean_13", "ean_8", "upc_a", "upc_e"];
+const FORMATOS_NATIVOS = ["ean_13", "ean_8", "upc_a", "upc_e"];
 
 let parar = null;
+let lectorCache = null;
 
 export function detener() {
   if (parar) {
@@ -16,21 +17,49 @@ export function detener() {
   }
 }
 
+async function lector() {
+  if (lectorCache) return lectorCache;
+  const [{ BrowserMultiFormatReader }, { DecodeHintType, BarcodeFormat }] = await Promise.all([
+    import("https://cdn.jsdelivr.net/npm/@zxing/browser@0.1.5/+esm"),
+    import("https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/+esm")
+  ]);
+
+  // Acotar los formatos acelera mucho la detección y evita falsos positivos.
+  const pistas = new Map();
+  pistas.set(DecodeHintType.POSSIBLE_FORMATS, [
+    BarcodeFormat.EAN_13,
+    BarcodeFormat.EAN_8,
+    BarcodeFormat.UPC_A,
+    BarcodeFormat.UPC_E
+  ]);
+  pistas.set(DecodeHintType.TRY_HARDER, true);
+
+  lectorCache = new BrowserMultiFormatReader(pistas);
+  return lectorCache;
+}
+
 async function nativoDisponible() {
   if (!("BarcodeDetector" in window)) return false;
   try {
     const admitidos = await window.BarcodeDetector.getSupportedFormats();
-    return FORMATOS.some((f) => admitidos.includes(f));
+    return FORMATOS_NATIVOS.some((f) => admitidos.includes(f));
   } catch {
     return false;
   }
 }
 
-// Devuelve el código leído, o null si se cancela.
-export async function escanear(video) {
+export async function escanear(video, alEstado = () => {}) {
   detener();
+
+  // Resolución alta y enfoque continuo: un código de barras a 15 cm necesita
+  // ambas cosas. Con 640×480 y enfoque fijo no hay manera.
   const flujo = await navigator.mediaDevices.getUserMedia({
-    video: { facingMode: { ideal: "environment" } },
+    video: {
+      facingMode: { ideal: "environment" },
+      width: { ideal: 1920 },
+      height: { ideal: 1080 },
+      advanced: [{ focusMode: "continuous" }]
+    },
     audio: false
   });
 
@@ -39,16 +68,18 @@ export async function escanear(video) {
   video.muted = true;
   await video.play();
 
+  const pista = flujo.getVideoTracks()[0];
+  const ajustes = pista.getSettings();
+  alEstado(`Buscando código… (${ajustes.width}×${ajustes.height})`);
+
   const cerrar = () => flujo.getTracks().forEach((p) => p.stop());
 
-  if (await nativoDisponible()) {
-    return leerConNativo(video, cerrar);
-  }
-  return leerConZxing(video, cerrar);
+  if (await nativoDisponible()) return conNativo(video, cerrar);
+  return conZxing(video, cerrar, alEstado);
 }
 
-function leerConNativo(video, cerrar) {
-  const detector = new window.BarcodeDetector({ formats: FORMATOS });
+function conNativo(video, cerrar) {
+  const detector = new window.BarcodeDetector({ formats: FORMATOS_NATIVOS });
   return new Promise((resolver) => {
     let vivo = true;
     parar = () => {
@@ -56,7 +87,6 @@ function leerConNativo(video, cerrar) {
       cerrar();
       resolver(null);
     };
-
     const tic = async () => {
       if (!vivo) return;
       try {
@@ -69,7 +99,7 @@ function leerConNativo(video, cerrar) {
           return;
         }
       } catch {
-        // Un fotograma ilegible no es un error: se prueba con el siguiente.
+        // Fotograma ilegible: se prueba con el siguiente.
       }
       requestAnimationFrame(tic);
     };
@@ -77,31 +107,58 @@ function leerConNativo(video, cerrar) {
   });
 }
 
-async function leerConZxing(video, cerrar) {
-  const { BrowserMultiFormatReader } = await import(
-    "https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/+esm"
-  );
-  const lector = new BrowserMultiFormatReader();
+async function conZxing(video, cerrar, alEstado) {
+  let lec;
+  try {
+    lec = await lector();
+  } catch {
+    cerrar();
+    throw new Error("No se ha podido cargar el lector. Prueba con la foto del código.");
+  }
 
   return new Promise((resolver) => {
     let resuelto = false;
+    let controles = null;
 
-    parar = () => {
+    const terminar = (valor) => {
       if (resuelto) return;
       resuelto = true;
-      lector.reset();
+      try {
+        if (controles) controles.stop();
+      } catch {
+        /* el lector ya estaba parado */
+      }
       cerrar();
-      resolver(null);
+      parar = null;
+      resolver(valor);
     };
 
-    lector.decodeFromVideoElement(video, (resultado) => {
-      if (resultado && !resuelto) {
-        resuelto = true;
-        lector.reset();
-        cerrar();
-        parar = null;
-        resolver(resultado.getText());
-      }
-    });
+    parar = () => terminar(null);
+
+    lec
+      .decodeFromVideoElement(video, (resultado) => {
+        if (resultado) terminar(resultado.getText());
+      })
+      .then((c) => {
+        controles = c;
+      })
+      .catch(() => {
+        alEstado("El lector ha fallado. Usa la foto del código.");
+        terminar(null);
+      });
   });
+}
+
+// Vía fiable en iPhone: la foto del sistema, a resolución completa y enfocada.
+export async function leerDeFoto(archivo) {
+  const lec = await lector();
+  const url = URL.createObjectURL(archivo);
+  try {
+    const resultado = await lec.decodeFromImageUrl(url);
+    return resultado.getText();
+  } catch {
+    return null;
+  } finally {
+    URL.revokeObjectURL(url);
+  }
 }
