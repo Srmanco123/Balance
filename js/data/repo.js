@@ -120,3 +120,51 @@ export async function leerRecetas(uid, cuantas = 30) {
   const captura = await getDocs(consulta);
   return captura.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
+
+// ---------- Plantillas de entrenamiento ----------
+
+export async function guardarPlantilla(uid, plantilla, id) {
+  if (id) {
+    await setDoc(doc(db, "usuarios", uid, "plantillas", id), { ...plantilla, v: ESQUEMA }, { merge: true });
+    return id;
+  }
+  const ref = await addDoc(collection(db, "usuarios", uid, "plantillas"), {
+    ...plantilla,
+    v: ESQUEMA,
+    creada: serverTimestamp()
+  });
+  return ref.id;
+}
+
+export async function leerPlantillas(uid) {
+  const captura = await getDocs(collection(db, "usuarios", uid, "plantillas"));
+  return captura.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+export async function borrarPlantilla(uid, id) {
+  await deleteDoc(doc(db, "usuarios", uid, "plantillas", id));
+}
+
+// ---------- Entrenos ----------
+
+export async function guardarEntreno(uid, entreno) {
+  return addDoc(collection(db, "usuarios", uid, "entrenos"), {
+    ...entreno,
+    v: ESQUEMA,
+    ts: serverTimestamp()
+  });
+}
+
+export async function leerEntrenos(uid, cuantos = 30) {
+  const consulta = query(
+    collection(db, "usuarios", uid, "entrenos"),
+    orderBy("fecha", "desc"),
+    limit(cuantos)
+  );
+  const captura = await getDocs(consulta);
+  return captura.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+export async function borrarEntreno(uid, id) {
+  await deleteDoc(doc(db, "usuarios", uid, "entrenos", id));
+}

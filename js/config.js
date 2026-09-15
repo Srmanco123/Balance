@@ -18,7 +18,7 @@ export const WORKER = "https://balance-api.manurv2.workers.dev";
 // no se comentan en el código.
 export const MODULOS = {
   comida: true,
-  entreno: false,
+  entreno: true,
   progreso: false,
   motor: false
 };
@@ -27,4 +27,4 @@ export const ZONA_HORARIA = "Europe/Madrid";
 
 // Se muestra en Ajustes: sirve para saber de un vistazo qué versión está sirviendo
 // GitHub Pages, que cachea diez minutos.
-export const VERSION = "1.0 — foto del plato";
+export const VERSION = "1.2 — entrenos y Salud";

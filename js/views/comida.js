@@ -142,7 +142,13 @@ function fichaIngredientes(resultado) {
         ${resultado.nota ? `<p class="nota">${resultado.nota}</p>` : ""}
 
         <button class="boton boton--principal" id="anotar" style="margin-top:14px">Anotar</button>
-        <button class="boton" id="comoReceta" style="margin-top:10px">Guardar como receta</button>
+        <div class="campo" style="margin-top:16px">
+          <label for="nombreReceta">Guardar como receta</label>
+          <div class="fila">
+            <input type="text" id="nombreReceta" placeholder="Pollo al horno con patata">
+            <button class="boton" id="comoReceta">Guardar</button>
+          </div>
+        </div>
       </div>
     `;
 
@@ -193,8 +199,14 @@ function fichaIngredientes(resultado) {
     });
 
     caja.querySelector("#comoReceta").addEventListener("click", async (evento) => {
-      const nombre = prompt("Nombre de la receta");
-      if (!nombre) return;
+      // Nada de prompt(): los diálogos del navegador están bloqueados en Pages.
+      const campo = caja.querySelector("#nombreReceta");
+      const nombre = (campo.value || "").trim();
+      if (!nombre) {
+        campo.focus();
+        avisar("Ponle un nombre a la receta antes de guardarla.");
+        return;
+      }
       evento.currentTarget.disabled = true;
       try {
         const total = sumar(items);
