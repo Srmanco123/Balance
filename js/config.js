@@ -17,7 +17,7 @@ export const WORKER = "";
 // Interruptores por tanda: los módulos no entregados se apagan aquí,
 // no se comentan en el código.
 export const MODULOS = {
-  comida: false,
+  comida: true,
   entreno: false,
   progreso: false,
   motor: false
@@ -27,4 +27,4 @@ export const ZONA_HORARIA = "Europe/Madrid";
 
 // Se muestra en Ajustes: sirve para saber de un vistazo qué versión está sirviendo
 // GitHub Pages, que cachea diez minutos.
-export const VERSION = "0.6 — reparto de macros";
+export const VERSION = "0.9 — código de barras";

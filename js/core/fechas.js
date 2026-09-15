@@ -23,3 +23,11 @@ export function comoTexto(iso) {
   const [a, m, d] = iso.split("-");
   return `${d}/${m}`;
 }
+
+export function horaLocal(fecha = new Date()) {
+  return new Intl.DateTimeFormat("es-ES", {
+    timeZone: ZONA,
+    hour: "2-digit",
+    minute: "2-digit"
+  }).format(fecha);
+}
