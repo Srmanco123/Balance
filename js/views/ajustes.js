@@ -15,7 +15,8 @@ export function mount(caja) {
       <button class="boton" id="copiar" style="margin-top:12px">Copiar UID</button>
     </div>
 
-    <button class="boton" id="irMacros">Ajustar reparto de macros</button>
+    <button class="boton" id="irPerfil">Editar mis datos</button>
+    <button class="boton" id="irMacros" style="margin-top:10px">Ajustar reparto de macros</button>
 
     <div class="tarjeta" style="margin-top:14px">
       <video class="visor oculto" id="visor" playsinline muted></video>
@@ -61,6 +62,10 @@ export function mount(caja) {
       visor.classList.add("oculto");
       estado(error.name === "NotAllowedError" ? "permiso denegado" : error.message);
     }
+  });
+
+  caja.querySelector("#irPerfil").addEventListener("click", () => {
+    document.dispatchEvent(new CustomEvent("balance:ir", { detail: "perfil" }));
   });
 
   caja.querySelector("#irMacros").addEventListener("click", () => {
