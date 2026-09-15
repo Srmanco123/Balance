@@ -377,3 +377,47 @@ input[type="range"]:focus-visible { outline: 2px solid var(--acento); outline-of
 }
 
 .linea { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+
+/* ---------- Segmentos y ficha de foto ---------- */
+
+.segmentos {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: var(--superficie);
+  border: 1px solid var(--linea);
+  border-radius: 12px;
+  margin-bottom: 16px;
+}
+
+.segmentos button {
+  flex: 1;
+  padding: 10px 6px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--apagado);
+  font: inherit;
+  font-size: 15px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.segmentos button[aria-current="true"] { background: var(--linea); color: var(--texto); }
+
+.miniatura {
+  width: 100%;
+  max-height: 180px;
+  object-fit: cover;
+  border-radius: 10px;
+  margin-bottom: 14px;
+}
+
+.ingrediente { padding: 12px 0; border-bottom: 1px solid var(--linea); }
+.ingrediente:last-child { border-bottom: 0; }
+.ingrediente__cabeza { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.ingrediente .paso { margin: 8px 0 6px; }
+.ingrediente .paso__b { flex: 0 0 46px; height: 42px; font-size: 20px; }
+.ingrediente .paso__v { font-size: 16px; }
+
+button.linea { text-align: left; }

@@ -97,3 +97,26 @@ export async function leerEntradasDelDia(uid, fecha) {
 export async function borrarEntrada(uid, id) {
   await deleteDoc(doc(db, "usuarios", uid, "entradas", id));
 }
+
+// ---------- Recetas ----------
+// Nacen de corregir el análisis de una foto o de pesar ingredientes.
+// Se guardan con sus macros por 100 g para poder reutilizarlas a cualquier peso.
+
+export async function guardarReceta(uid, receta) {
+  return addDoc(collection(db, "usuarios", uid, "recetas"), {
+    ...receta,
+    v: ESQUEMA,
+    usos: 0,
+    creada: serverTimestamp()
+  });
+}
+
+export async function leerRecetas(uid, cuantas = 30) {
+  const consulta = query(
+    collection(db, "usuarios", uid, "recetas"),
+    orderBy("creada", "desc"),
+    limit(cuantas)
+  );
+  const captura = await getDocs(consulta);
+  return captura.docs.map((d) => ({ id: d.id, ...d.data() }));
+}

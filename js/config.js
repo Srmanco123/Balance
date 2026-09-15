@@ -12,7 +12,7 @@ export const firebaseConfig = {
 };
 
 // URL del Worker. Se rellena cuando esté desplegado.
-export const WORKER = "";
+export const WORKER = "https://balance-api.manurv2.workers.dev";
 
 // Interruptores por tanda: los módulos no entregados se apagan aquí,
 // no se comentan en el código.
@@ -27,4 +27,4 @@ export const ZONA_HORARIA = "Europe/Madrid";
 
 // Se muestra en Ajustes: sirve para saber de un vistazo qué versión está sirviendo
 // GitHub Pages, que cachea diez minutos.
-export const VERSION = "0.9 — código de barras";
+export const VERSION = "1.0 — foto del plato";
