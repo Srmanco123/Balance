@@ -31,3 +31,17 @@ export function horaLocal(fecha = new Date()) {
     minute: "2-digit"
   }).format(fecha);
 }
+
+// Semana ISO, con el lunes como primer día.
+export function semanaISO(fecha = new Date()) {
+  const f = new Date(fechaLocal(fecha));
+  const dia = (f.getUTCDay() + 6) % 7;
+  f.setUTCDate(f.getUTCDate() - dia + 3);
+  const jueves = f.getTime();
+  f.setUTCMonth(0, 1);
+  if (f.getUTCDay() !== 4) {
+    f.setUTCMonth(0, 1 + ((4 - f.getUTCDay()) + 7) % 7);
+  }
+  const numero = 1 + Math.ceil((jueves - f) / 604800000);
+  return `${new Date(jueves).getUTCFullYear()}-W${String(numero).padStart(2, "0")}`;
+}

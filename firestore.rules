@@ -1,0 +1,179 @@
+// firestore.rules
+//
+// Versionar en el repositorio y desplegar con:
+//   firebase deploy --only firestore:rules
+//
+// Rutas corregidas respecto al primer borrador: indice/{uid} y productos/{ean}.
+// Un número impar de segmentos en Firestore es una colección, así que
+// indice/usuarios/{uid} y catalogo/productos/{ean} no eran documentos válidos.
+//
+// PRIMERA TANDA: sin Worker todavía, la autorización no puede venir de los
+// claims del token. Se resuelve leyendo indice/{uid}, que cuesta una lectura
+// facturable por evaluación. Cuando el Worker emita los claims, sustituir las
+// funciones marcadas con CLAIMS y borrar los get().
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------- identidad ----------
+
+    function haySesion() {
+      return request.auth != null;
+    }
+
+    // CLAIMS: cuando el Worker emita los claims, esto pasa a
+    //   return request.auth.token;
+    // y desaparece la lectura de Firestore.
+    function acceso() {
+      return get(/databases/$(database)/documents/indice/$(request.auth.uid)).data;
+    }
+
+    function dentro(c) {
+      return haySesion() && acceso().consulta == c;
+    }
+
+    function esPro(c) {
+      return dentro(c) && acceso().rol in ['titular', 'colaborador'];
+    }
+
+    function esTitular(c) {
+      return dentro(c) && acceso().rol == 'titular';
+    }
+
+    function esPac(c, p) {
+      return dentro(c) && acceso().rol == 'paciente' && acceso().paciente == p;
+    }
+
+    // El paciente puede corregir sus datos de contacto, nunca su pauta ni sus
+    // puntos. Si pudiera, el programa de logros no valdría nada.
+    function sinTocarPauta() {
+      return !request.resource.data.diff(resource.data).affectedKeys()
+        .hasAny(['objetivo', 'rigidez', 'estado', 'plan', 'adherencia',
+                 'puntos', 'racha', 'uid', 'alta', 'consulta']);
+    }
+
+    // Igual para el perfil: el objetivo lo pauta el profesional.
+    function sinTocarObjetivo() {
+      return !request.resource.data.diff(resource.data).affectedKeys()
+        .hasAny(['objetivoKcal', 'objetivoOrigen', 'objetivoDesde',
+                 'proteinaPorKilo', 'grasaPorKilo']);
+    }
+
+    // ---------- índice de acceso ----------
+    // Cada usuario lee solo el suyo. Nunca se escribe desde el cliente: si se
+    // pudiera, cualquiera con una cuenta de Google se metería en cualquier
+    // consulta cambiando un campo.
+
+    match /indice/{uid} {
+      allow read:  if haySesion() && request.auth.uid == uid;
+      allow write: if false;
+    }
+
+    // ---------- catálogo global de productos ----------
+    // Caché compartida de Open Food Facts. No contiene dato personal.
+
+    match /productos/{ean} {
+      allow read:   if haySesion();
+      allow create: if haySesion();
+      allow update, delete: if false;
+    }
+
+    // ---------- la consulta ----------
+
+    match /consultas/{c} {
+      allow read:   if esPro(c);
+      allow update: if esTitular(c);
+      allow create, delete: if false;
+
+      // Altas y roles, solo desde el servidor: si no, escalada de privilegios.
+      match /profesionales/{uid} {
+        allow read:  if esPro(c);
+        allow write: if false;
+      }
+
+      // Plantillas de dieta: método de trabajo del profesional.
+      match /dietas/{id} {
+        allow read, write: if esPro(c);
+      }
+
+      // Alimentos propios de la consulta. El paciente los lee porque los
+      // necesita para registrar.
+      match /biblioteca/{ean} {
+        allow read:  if dentro(c);
+        allow write: if esPro(c);
+      }
+
+      // ---------- el paciente ----------
+
+      match /pacientes/{p} {
+        allow read:   if esPro(c) || esPac(c, p);
+        allow create: if esPro(c);
+        allow update: if esPro(c) || (esPac(c, p) && sinTocarPauta());
+        allow delete: if false;   // la baja va por el Worker, con borrado en cascada
+
+        match /config/{doc} {
+          allow read:   if esPro(c) || esPac(c, p);
+          allow create: if esPro(c) || esPac(c, p);
+          allow update: if esPro(c) || (esPac(c, p) && sinTocarObjetivo());
+          allow delete: if false;
+        }
+
+        // La pauta: escribe el profesional, lee el paciente.
+        match /menu/{dia} {
+          allow read:  if esPro(c) || esPac(c, p);
+          allow write: if esPro(c);
+        }
+
+        // El registro: lo escribe el paciente; el profesional corrige errores.
+        // Un bloque por colección a propósito. Con un comodín /{col}/{doc} las
+        // reglas se sumarían y un allow write: if false de más abajo no
+        // impediría nada: en Firestore basta que UN match lo permita.
+        match /pesos/{d} {
+          allow read:  if esPro(c) || esPac(c, p);
+          allow write: if esPro(c) || esPac(c, p);
+        }
+        match /entradas/{d} {
+          allow read:  if esPro(c) || esPac(c, p);
+          allow write: if esPro(c) || esPac(c, p);
+        }
+        match /entrenos/{d} {
+          allow read:  if esPro(c) || esPac(c, p);
+          allow write: if esPro(c) || esPac(c, p);
+        }
+        match /recetas/{d} {
+          allow read:  if esPro(c) || esPac(c, p);
+          allow write: if esPro(c) || esPac(c, p);
+        }
+        match /plantillas/{d} {
+          allow read:  if esPro(c) || esPac(c, p);
+          allow write: if esPro(c) || esPac(c, p);
+        }
+        match /hechas/{d} {
+          allow read:  if esPro(c) || esPac(c, p);
+          allow write: if esPac(c, p);
+        }
+
+        // El hilo: los dos crean, nadie edita ni borra. Puede formar parte de
+        // la historia clínica y un mensaje reescrito después no vale como
+        // registro.
+        match /mensajes/{m} {
+          allow read:   if esPro(c) || esPac(c, p);
+          allow create: if (esPro(c) || esPac(c, p))
+                        && request.resource.data.autor == request.auth.uid
+                        && request.resource.data.ts == request.time;
+          allow update, delete: if false;
+        }
+
+        // PROVISIONAL: los concede el profesional. Cuando el Worker esté
+        // desplegado, cambiar por "allow write: if false" y otorgarlas desde
+        // el servidor.
+        match /logros/{l} {
+          allow read:  if esPro(c) || esPac(c, p);
+          allow write: if esPro(c);
+        }
+      }
+    }
+  }
+}

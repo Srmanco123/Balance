@@ -1,4 +1,4 @@
-import { usuario } from "../data/firebase.js";
+import { sujeto } from "../data/sesion.js";
 import { leerPerfil, guardarPeso, leerPesos } from "../data/repo.js";
 import { fechaLocal, comoTexto } from "../core/fechas.js";
 import { serieTendencia, tendenciaActual, ritmoSemanal } from "../core/tendencia.js";
@@ -16,7 +16,7 @@ export function mount(caja) {
 }
 
 async function pintar(caja) {
-  const uid = usuario().uid;
+  const uid = sujeto();
   const [perfil, pesos] = await Promise.all([leerPerfil(uid), leerPesos(uid)]);
   if (!perfil) {
     caja.innerHTML = `<p class="vacio">Faltan tus datos de partida.</p>`;
@@ -25,7 +25,11 @@ async function pintar(caja) {
 
   const hoy = fechaLocal();
   const deHoy = pesos.find((p) => p.fecha === hoy);
-  const objetivo = objetivoInicial(perfil);
+  // El objetivo pautado por el profesional manda sobre el medido y sobre el
+  // calculado: si lo ha fijado una persona, no lo cambia un algoritmo.
+  const pautado = perfil.objetivoOrigen === "pautado" && perfil.objetivoKcal;
+  const medido = perfil.objetivoOrigen === "medido" && perfil.objetivoKcal;
+  const objetivo = pautado || medido ? perfil.objetivoKcal : objetivoInicial(perfil);
   const macros = repartoMacros(objetivo, perfil);
   const gasto = gastoInicial(perfil);
   const enElSuelo = objetivo <= perfil.sueloKcal;
@@ -42,9 +46,20 @@ async function pintar(caja) {
         <span><i style="background:var(--hidratos)"></i>${macros.hidratos} g hidratos</span>
         <span><i style="background:var(--grasa)"></i>${macros.grasa} g grasa</span>
       </div>
-      <p class="nota">Gasto estimado ${gasto} kcal. Ritmo previsto
-      ${ritmoReal.toFixed(2).replace(".", ",")} kg por semana. Se corregirá cuando haya
-      semanas suficientes para medirlo de verdad.</p>
+      <p class="nota">${
+        pautado
+          ? `Objetivo pautado por tu nutricionista${
+              perfil.objetivoDesde ? ` el ${comoTexto(perfil.objetivoDesde)}` : ""
+            }. Gasto estimado ${gasto} kcal.`
+          : medido
+          ? `Gasto medido ${perfil.gastoMedido || gasto} kcal, calculado con tus propios datos.`
+          : `Gasto estimado ${gasto} kcal.`
+      } Ritmo previsto
+      ${ritmoReal.toFixed(2).replace(".", ",")} kg por semana.${
+        pautado
+          ? ""
+          : ` Se corregirá cuando haya semanas suficientes para medirlo de verdad.`
+      }</p>
       ${
         enElSuelo
           ? `<p class="nota aviso--suave">El ritmo que elegiste pedía menos calorías de las que

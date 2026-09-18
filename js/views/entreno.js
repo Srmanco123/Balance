@@ -1,4 +1,4 @@
-import { usuario } from "../data/firebase.js";
+import { sujeto } from "../data/sesion.js";
 import {
   guardarPlantilla,
   leerPlantillas,
@@ -34,7 +34,7 @@ export function unmount() {
 }
 
 async function cargar() {
-  const uid = usuario().uid;
+  const uid = sujeto();
   await importarDeSalud(uid);
   [plantillas, historial] = await Promise.all([leerPlantillas(uid), leerEntrenos(uid)]);
   inicio();
@@ -131,7 +131,7 @@ function engancharBorrados() {
   caja.querySelectorAll("[data-borrar-entreno]").forEach((b) =>
     b.addEventListener("click", async () => {
       b.disabled = true;
-      await borrarEntreno(usuario().uid, b.dataset.borrarEntreno);
+      await borrarEntreno(sujeto(), b.dataset.borrarEntreno);
       await cargar();
     })
   );
@@ -167,7 +167,7 @@ function registrarActividad(actividad) {
   caja.querySelector("#volver").addEventListener("click", inicio);
   caja.querySelector("#guardar").addEventListener("click", async (evento) => {
     evento.currentTarget.disabled = true;
-    await guardarEntreno(usuario().uid, {
+    await guardarEntreno(sujeto(), {
       tipo: "actividad",
       actividad,
       duracion: minutos,
@@ -276,7 +276,7 @@ function sesion(plantilla) {
         return;
       }
       evento.currentTarget.disabled = true;
-      await guardarEntreno(usuario().uid, {
+      await guardarEntreno(sujeto(), {
         tipo: "fuerza",
         plantillaId: plantilla.id,
         plantillaNombre: plantilla.nombre,
@@ -377,7 +377,7 @@ function editorPlantilla() {
         return;
       }
       evento.currentTarget.disabled = true;
-      await guardarPlantilla(usuario().uid, { nombre, ejercicios: validos });
+      await guardarPlantilla(sujeto(), { nombre, ejercicios: validos });
       editorPlantilla.nombre = "";
       await cargar();
     });

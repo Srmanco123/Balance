@@ -464,3 +464,125 @@ button.linea { text-align: left; }
 
 .tresColumnas { display: flex; gap: 10px; }
 .tresColumnas .campo { flex: 1; margin-bottom: 8px; }
+
+
+/* ===================================================================
+   Consola del profesional. Añadir al final de css/estilo.css.
+   Reutiliza las variables y clases que ya existen (.tarjeta, .fila,
+   .chip, .campo, .segmentos): aquí solo van las piezas nuevas.
+   =================================================================== */
+
+/* Filas pulsables de la lista de pacientes y de logros */
+.fila--paciente,
+.fila--logro {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+  text-align: left;
+  background: var(--superficie);
+  border: 1px solid var(--linea);
+  border-radius: 14px;
+  padding: 10px 12px;
+  color: var(--texto);
+  font: inherit;
+  cursor: pointer;
+}
+.fila--logro { grid-template-columns: minmax(0, 1fr) auto; }
+.fila--paciente:active,
+.fila--logro:active { background: #22262c; }
+.fila--bloqueada { opacity: 0.5; }
+
+.fila--item,
+.fila--dieta {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--linea);
+}
+.fila--item:last-of-type,
+.fila--dieta:last-of-type { border-bottom: 0; }
+
+.fila__texto { min-width: 0; }
+.fila__texto b {
+  display: block;
+  font-weight: 600;
+  font-size: 15px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fila__texto em {
+  display: block;
+  font-style: normal;
+  font-size: 12.5px;
+  color: var(--apagado);
+}
+
+/* Anillo de adherencia: el número dentro de un círculo de color */
+.fila__anillo {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  border: 2.5px solid var(--linea);
+  color: var(--apagado);
+}
+.fila__anillo--bien { border-color: var(--bien); color: var(--bien); }
+.fila__anillo--ojo  { border-color: var(--acento); color: var(--acento); }
+.fila__anillo--mal  { border-color: var(--mal); color: var(--mal); }
+
+.chip--bien { color: var(--bien); border-color: var(--bien); }
+.chip--ojo  { color: var(--acento); border-color: var(--acento); }
+.chip--mal  { color: var(--mal); border-color: var(--mal); }
+
+/* Campo en línea: varios controles en una fila que se apila en pantalla estrecha */
+.campo--linea {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.campo--linea input { flex: 1 1 90px; min-width: 0; }
+.campo--linea input[type="number"] { flex: 0 0 76px; }
+.campo--linea button { flex: 0 0 auto; }
+
+/* Hilo de mensajes */
+.hilo {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 46vh;
+  overflow-y: auto;
+  margin-bottom: 12px;
+}
+.burbuja {
+  max-width: 82%;
+  margin: 0;
+  padding: 9px 13px;
+  border-radius: 17px;
+  font-size: 14.5px;
+  line-height: 1.38;
+}
+.burbuja--mia {
+  align-self: flex-end;
+  background: var(--acento);
+  color: #171512;
+  border-bottom-right-radius: 6px;
+}
+.burbuja--suya {
+  align-self: flex-start;
+  background: #22262c;
+  border: 1px solid var(--linea);
+  border-bottom-left-radius: 6px;
+}
+
+/* Cabecera del bloque de una comida del menú */
+.ingrediente__cabeza { align-items: baseline; }

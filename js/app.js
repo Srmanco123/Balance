@@ -1,5 +1,18 @@
-import { alCambiarSesion, entrar, resultadoRedireccion, usuario } from "./data/firebase.js";
+import { alCambiarSesion, entrar, resultadoRedireccion } from "./data/firebase.js";
 import { leerPerfil } from "./data/repo.js";
+import {
+  abrir,
+  cerrar,
+  contexto,
+  esProfesional,
+  tieneFichaPropia,
+  sujeto,
+  haySujeto,
+  mirar,
+  volverAMiFicha,
+  mirandoAOtro,
+  SIN_ACCESO
+} from "./data/sesion.js";
 import { MODULOS } from "./config.js";
 
 import * as hoy from "./views/hoy.js";
@@ -9,14 +22,26 @@ import * as progreso from "./views/progreso.js";
 import * as ajustes from "./views/ajustes.js";
 import * as perfil from "./views/perfil.js";
 import * as macros from "./views/macros.js";
+import * as consola from "./views/consola.js";
+import * as paciente from "./views/paciente.js";
+import * as dietas from "./views/dietas.js";
 
-const VISTAS = { hoy, comida, entreno, progreso, ajustes, perfil, macros };
+const VISTAS = {
+  hoy, comida, entreno, progreso, ajustes, perfil, macros,
+  consola, paciente, dietas
+};
 
-const PESTANAS = [
+// Dos juegos de pestañas, no uno de ocho: en un iPhone no caben.
+const BARRA_PACIENTE = [
   { id: "hoy", glifo: "◐", activa: true },
   { id: "comida", glifo: "◇", activa: MODULOS.comida },
   { id: "entreno", glifo: "△", activa: MODULOS.entreno },
   { id: "progreso", glifo: "◈", activa: MODULOS.progreso }
+];
+
+const BARRA_PRO = [
+  { id: "consola", glifo: "◫", activa: true },
+  { id: "dietas", glifo: "▤", activa: true }
 ];
 
 const acceso = document.querySelector("#acceso");
@@ -24,18 +49,72 @@ const aplicacion = document.querySelector("#aplicacion");
 const caja = document.querySelector("#contenido");
 const rotulo = document.querySelector("#titulo");
 const barra = document.querySelector("nav");
+const cabecera = document.querySelector("header");
 
 let actual = null;
+let lado = "paciente";
+
+// El conmutador se crea aquí y no en index.html: solo existe para quien es
+// profesional y además tiene ficha propia.
+const botonLado = document.createElement("button");
+botonLado.className = "iconico";
+botonLado.id = "lado";
+botonLado.classList.add("oculto");
+cabecera.insertBefore(botonLado, cabecera.querySelector("#ajustes"));
+
+function pintarConmutador() {
+  const visible = esProfesional() && tieneFichaPropia();
+  botonLado.classList.toggle("oculto", !visible);
+  botonLado.textContent = lado === "pro" ? "Mi Balance" : "Consulta";
+  botonLado.setAttribute(
+    "aria-label",
+    lado === "pro" ? "Ir a mis propios datos" : "Ir a la consulta"
+  );
+}
+
+botonLado.addEventListener("click", () => {
+  lado = lado === "pro" ? "paciente" : "pro";
+  if (lado === "paciente") volverAMiFicha();
+  pintarBarra();
+  pintarConmutador();
+  ir(lado === "pro" ? "consola" : "hoy");
+});
+
+function pestañas() {
+  return lado === "pro" ? BARRA_PRO : BARRA_PACIENTE;
+}
 
 function pintarBarra() {
-  barra.innerHTML = PESTANAS.map(
-    (p) => `<button data-vista="${p.id}" ${p.activa ? "" : "disabled"}>
+  barra.innerHTML = pestañas()
+    .map(
+      (p) => `<button data-vista="${p.id}" ${p.activa ? "" : "disabled"}>
         <span class="glifo">${p.glifo}</span>${VISTAS[p.id].titulo}
       </button>`
-  ).join("");
+    )
+    .join("");
 
   barra.querySelectorAll("button").forEach((boton) => {
     boton.addEventListener("click", () => ir(boton.dataset.vista));
+  });
+}
+
+// Aviso permanente cuando un profesional está mirando la ficha de otro: evita
+// registrar un peso o una comida en el paciente equivocado.
+function pintarMirando() {
+  const anterior = document.querySelector("#mirando");
+  if (anterior) anterior.remove();
+  if (!mirandoAOtro()) return;
+
+  const tira = document.createElement("p");
+  tira.id = "mirando";
+  tira.className = "aviso aviso--suave";
+  tira.style.margin = "0 0 12px";
+  tira.innerHTML = `Estás viendo la ficha de <b>${paciente.nombreActivo() || "un paciente"}</b>.
+    <button class="boton" id="salirFicha" style="margin-top:8px">Volver a la consulta</button>`;
+  caja.prepend(tira);
+  tira.querySelector("#salirFicha").addEventListener("click", () => {
+    volverAMiFicha();
+    ir("consola");
   });
 }
 
@@ -47,6 +126,7 @@ function ir(nombre) {
   rotulo.textContent = vista.titulo;
   caja.innerHTML = "";
   vista.mount(caja);
+  if (nombre !== "consola" && nombre !== "dietas") pintarMirando();
   caja.scrollTop = 0;
   barra.querySelectorAll("button").forEach((boton) => {
     if (boton.dataset.vista === nombre) boton.setAttribute("aria-current", "page");
@@ -73,17 +153,45 @@ document.querySelector("#ajustes").addEventListener("click", () => ir("ajustes")
 // evita dependencias circulares entre app.js y las propias vistas.
 document.addEventListener("balance:ir", (evento) => ir(evento.detail));
 
-// Si la sesión vino por redirección, el error aparece aquí y no en el botón.
+// La consola pide abrir una ficha: fija el sujeto y entra en la vista.
+document.addEventListener("balance:abrirPaciente", (evento) => {
+  mirar(evento.detail);
+  ir("paciente");
+});
+
 resultadoRedireccion().catch((error) => {
   document.querySelector("#aviso").textContent =
     "No se ha podido iniciar sesión: " + (error.code || error.message);
 });
 
+function sinAcceso() {
+  aplicacion.classList.add("oculto");
+  acceso.classList.remove("oculto");
+  document.querySelector("#aviso").innerHTML = `Tu cuenta no está vinculada a ninguna
+    consulta. Si tu nutricionista te ha invitado, abre el enlace del correo.`;
+  document.querySelector("#entrar").disabled = false;
+}
+
 async function arrancar() {
+  try {
+    await abrir();
+  } catch (error) {
+    if (error.message === SIN_ACCESO) return sinAcceso();
+    throw error;
+  }
+
+  lado = esProfesional() ? "pro" : "paciente";
   pintarBarra();
+  pintarConmutador();
+
+  if (lado === "pro") {
+    ir("consola");
+    return;
+  }
+
   let datos = null;
   try {
-    datos = await leerPerfil(usuario().uid);
+    datos = await leerPerfil(sujeto());
   } catch (error) {
     console.warn("No se ha podido leer el perfil", error);
   }
@@ -108,13 +216,20 @@ alCambiarSesion((u) => {
   if (u) {
     acceso.classList.add("oculto");
     aplicacion.classList.remove("oculto");
-    if (!actual) arrancar();
+    if (!actual) {
+      arrancar().catch((error) => {
+        document.querySelector("#aviso").textContent =
+          "No se ha podido abrir la sesión: " + (error.code || error.message);
+      });
+    }
   } else {
     if (actual && VISTAS[actual].unmount) VISTAS[actual].unmount();
     actual = null;
+    cerrar();
     aplicacion.classList.add("oculto");
     acceso.classList.remove("oculto");
     barra.classList.remove("oculto");
+    botonLado.classList.add("oculto");
     document.querySelector("#entrar").disabled = false;
   }
 });
@@ -124,3 +239,6 @@ if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("./sw.js").catch(() => {});
   });
 }
+
+// Para que otras vistas sepan si hay paciente activo sin importar sesion.js.
+export { haySujeto, contexto };

@@ -1,4 +1,4 @@
-import { usuario } from "../data/firebase.js";
+import { sujeto } from "../data/sesion.js";
 import { leerPerfil, guardarPerfil } from "../data/repo.js";
 import { objetivoInicial, repartoMacros } from "../core/formulas.js";
 
@@ -18,7 +18,7 @@ export function mount(caja) {
 }
 
 async function pintar(caja) {
-  const uid = usuario().uid;
+  const uid = sujeto();
   const perfil = await leerPerfil(uid);
   if (!perfil) {
     caja.innerHTML = `<p class="vacio">Faltan tus datos de partida.</p>`;

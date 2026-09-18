@@ -1,5 +1,5 @@
+import { sujeto } from "../data/sesion.js";
 import { leerPerfil, guardarPerfil } from "../data/repo.js";
-import { usuario } from "../data/firebase.js";
 import {
   topesSugeridos,
   gastoInicial,
@@ -29,7 +29,7 @@ export function mount(caja, alTerminar) {
     (() => document.dispatchEvent(new CustomEvent("balance:ir", { detail: "hoy" })));
 
   caja.innerHTML = `<p class="vacio" style="margin-top:0">Cargando…</p>`;
-  leerPerfil(usuario().uid)
+  leerPerfil(sujeto())
     .then((previo) => pintar(caja, previo, salir))
     .catch(() => pintar(caja, null, salir));
 }
@@ -208,7 +208,7 @@ function pintar(caja, previo, alTerminar) {
     boton.disabled = true;
     boton.textContent = "Guardando…";
     try {
-      await guardarPerfil(usuario().uid, perfil);
+      await guardarPerfil(sujeto(), perfil);
       alTerminar(perfil);
     } catch (error) {
       aviso.textContent = "No se ha podido guardar: " + (error.code || error.message);

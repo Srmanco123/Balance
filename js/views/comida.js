@@ -1,4 +1,4 @@
-import { usuario } from "../data/firebase.js";
+import { sujeto } from "../data/sesion.js";
 import {
   leerProducto,
   guardarProducto,
@@ -183,7 +183,7 @@ function fichaIngredientes(resultado) {
     caja.querySelector("#anotar").addEventListener("click", async (evento) => {
       evento.currentTarget.disabled = true;
       try {
-        await guardarEntrada(usuario().uid, {
+        await guardarEntrada(sujeto(), {
           origen: "foto",
           fecha: fechaLocal(),
           hora: horaLocal(),
@@ -211,7 +211,7 @@ function fichaIngredientes(resultado) {
       try {
         const total = sumar(items);
         const gramos = items.reduce((a, i) => a + (i.gramos || 0), 0) || 1;
-        await guardarReceta(usuario().uid, {
+        await guardarReceta(sujeto(), {
           nombre,
           ingredientes: items,
           gramosTotales: gramos,
@@ -300,7 +300,7 @@ async function conCamara() {
 }
 
 async function resolverCodigo(ean) {
-  const uid = usuario().uid;
+  const uid = sujeto();
   avisar("Buscando…");
   try {
     let producto = await leerProducto(uid, ean);
@@ -397,7 +397,7 @@ function fichaProducto(producto, deCache) {
     evento.currentTarget.disabled = true;
     try {
       const m = paraCantidad(producto.por100, gramos);
-      await guardarEntrada(usuario().uid, {
+      await guardarEntrada(sujeto(), {
         origen: "barras",
         fecha: fechaLocal(),
         hora: horaLocal(),
@@ -418,7 +418,7 @@ function fichaProducto(producto, deCache) {
 async function panelRecetas(panel) {
   panel.innerHTML = `<p class="nota" style="margin-top:0">Cargando…</p>`;
   try {
-    const recetas = await leerRecetas(usuario().uid);
+    const recetas = await leerRecetas(sujeto());
     if (!recetas.length) {
       panel.innerHTML = `<p class="vacio" style="margin-top:0">
         <strong>Todavía no hay recetas.</strong>
@@ -457,7 +457,7 @@ async function panelRecetas(panel) {
 /* ---------------- Diario ---------------- */
 
 async function pintarDiario() {
-  const uid = usuario().uid;
+  const uid = sujeto();
   const zona = caja.querySelector("#diario");
   try {
     const entradas = await leerEntradasDelDia(uid, fechaLocal());
