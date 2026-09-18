@@ -9,14 +9,18 @@
 // esto se ejecuta desde tu máquina, nunca desde la app.
 //
 // Uso:
-//   node migrar.mjs --clave ./clave.json --uid TU_UID \
-//       --consulta balance --paciente manuel --nombre "Manuel" --crear --seco
+//   En Cloud Shell (sin clave, usa tu propia cuenta de Google):
+//     node migrar.mjs --proyecto balance-50507 --uid TU_UID \
+//         --consulta balance --paciente manuel --nombre "Manuel" --crear --seco
+//
+//   Con clave de servicio descargada:
+//     node migrar.mjs --clave ./clave.json --uid TU_UID ...
 //
 // Quita --seco cuando el recuento te cuadre. Es idempotente: se puede repetir
 // sin duplicar nada, porque conserva el identificador de cada documento.
 
 import { readFileSync } from "node:fs";
-import { initializeApp, cert } from "firebase-admin/app";
+import { initializeApp, cert, applicationDefault } from "firebase-admin/app";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 
 /* ---------------- argumentos ---------------- */
@@ -34,7 +38,8 @@ for (let i = 2; i < process.argv.length; i++) {
   }
 }
 
-const CLAVE = args.clave || "./clave.json";
+const CLAVE = args.clave;
+const PROYECTO = args.proyecto || process.env.GOOGLE_CLOUD_PROJECT;
 const UID = args.uid;
 const CONSULTA = args.consulta || "balance";
 const PACIENTE = args.paciente || "titular";
@@ -49,7 +54,22 @@ if (!UID) {
 
 /* ---------------- arranque ---------------- */
 
-initializeApp({ credential: cert(JSON.parse(readFileSync(CLAVE, "utf8"))) });
+// Dos formas de autenticarse:
+//   --clave ./clave.json   una clave de servicio descargada
+//   sin --clave            las credenciales del entorno (Cloud Shell), que
+//                          son las de tu propia cuenta de Google. Preferible:
+//                          no hay ningún archivo secreto que se pueda colar en
+//                          el repositorio.
+if (CLAVE) {
+  initializeApp({ credential: cert(JSON.parse(readFileSync(CLAVE, "utf8"))) });
+} else {
+  if (!PROYECTO) {
+    console.error("Sin --clave hace falta --proyecto con el id del proyecto de Firebase.");
+    process.exit(1);
+  }
+  initializeApp({ credential: applicationDefault(), projectId: PROYECTO });
+}
+
 const db = getFirestore();
 
 const ESQUEMA = 2;
@@ -190,10 +210,8 @@ try {
     SECO
       ? "\nNada escrito. Si el recuento cuadra, repite sin --seco."
       : "\nHecho. Los datos antiguos siguen en usuarios/%s: no los borres hasta\n" +
-          "haber entrado en la app y verlos todos. Para borrarlos después:\n" +
-          "  node migrar.mjs --clave %s --uid %s --borrar-origen",
-    UID,
-    CLAVE,
+          "haber entrado en la app y verlos todos. Para borrarlos después, el mismo\n" +
+          "comando añadiendo --borrar-origen.",
     UID
   );
 

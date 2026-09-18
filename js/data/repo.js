@@ -387,3 +387,27 @@ export async function aplicarObjetivo(sujeto, objetivo, informe) {
   });
   return { aplicado: true };
 }
+
+// ---------- Biblioteca de alimentos de la consulta ----------
+// Lo que el profesional añade a mano queda disponible para todos sus
+// pacientes. Es lo que hace que la herramienta mejore con el uso en vez de
+// obligar a teclear los mismos macros una y otra vez.
+
+export async function leerBiblioteca() {
+  const captura = await getDocs(collection(db, ...laConsulta(), "biblioteca"));
+  return captura.docs.map((d) => ({ id: d.id, origen: "biblioteca", ...d.data() }));
+}
+
+export async function guardarAlimento(alimento) {
+  const ref = await addDoc(collection(db, ...laConsulta(), "biblioteca"), {
+    nombre: alimento.nombre,
+    por100: alimento.por100,
+    v: ESQUEMA,
+    creado: serverTimestamp()
+  });
+  return ref.id;
+}
+
+export async function borrarAlimento(id) {
+  await deleteDoc(doc(db, ...laConsulta(), "biblioteca", id));
+}

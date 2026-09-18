@@ -586,3 +586,240 @@ button.linea { text-align: left; }
 
 /* Cabecera del bloque de una comida del menú */
 .ingrediente__cabeza { align-items: baseline; }
+
+/* ---------- Buscador de alimentos ---------- */
+
+.buscador { margin-top: 10px; }
+
+.buscador__campo {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.buscador__lista {
+  margin-top: 6px;
+  border: 1px solid var(--linea);
+  border-radius: 12px;
+  overflow: hidden;
+  max-height: 46vh;
+  overflow-y: auto;
+  background: #1a1d22;
+}
+
+.buscador__fila {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--linea);
+  padding: 9px 12px;
+  color: var(--texto);
+  font: inherit;
+  cursor: pointer;
+}
+.buscador__fila:last-child { border-bottom: 0; }
+.buscador__fila:active { background: #23272e; }
+
+.buscador__pie {
+  display: flex;
+  gap: 8px;
+  padding: 8px 10px;
+  border-top: 1px solid var(--linea);
+  flex-wrap: wrap;
+}
+.buscador__pie .boton { flex: 1 1 auto; font-size: 13px; padding: 7px 10px; }
+
+.buscador__elegido {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--acento);
+  border-radius: 12px;
+}
+.buscador__gramos { flex: 0 0 90px; }
+
+.campo--casilla {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+.campo--casilla input { width: auto; flex: 0 0 auto; }
+
+/* ---------- Cuadre del menú ---------- */
+
+.cuadre { margin: 10px 0 14px; }
+
+.cuadre__fila {
+  display: grid;
+  grid-template-columns: 74px 1fr auto;
+  gap: 10px;
+  align-items: center;
+  padding: 5px 0;
+}
+.cuadre__fila .mecha {
+  width: auto;
+  background: var(--linea);
+}
+.cuadre__fila .numero { font-size: 13px; white-space: nowrap; }
+
+.cuadre__bien { color: var(--bien); }
+.cuadre__ojo  { color: var(--acento); }
+.cuadre__mal  { color: var(--mal); }
+
+/* ===================================================================
+   Pantalla ancha. El corte son 900 píxeles CSS, no físicos: con la
+   etiqueta de viewport de index.html, un móvil de 1.080 px reales se
+   declara como 390, así que ningún teléfono entra aquí en vertical.
+   =================================================================== */
+
+@media (min-width: 900px) {
+  body {
+    display: grid;
+    grid-template-columns: 232px minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    height: 100vh;
+  }
+
+  header {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    padding: 16px 28px;
+    gap: 16px;
+  }
+
+  header h1 { font-size: 22px; }
+
+  /* La barra deja de estar abajo: con ratón, el borde inferior es el peor
+     sitio para lo que más se pulsa. */
+  nav {
+    position: static;
+    grid-column: 1;
+    grid-row: 2;
+    flex-direction: column;
+    align-items: stretch;
+    background: none;
+    backdrop-filter: none;
+    border-top: 0;
+    border-right: 1px solid var(--linea);
+    padding: 14px 10px;
+    gap: 2px;
+  }
+
+  nav button {
+    flex: 0 0 auto;
+    flex-direction: row;
+    justify-content: flex-start;
+    height: 44px;
+    gap: 14px;
+    padding: 0 14px;
+    font-size: 14.5px;
+    border-radius: 10px;
+  }
+
+  nav button:hover:not(:disabled) { color: var(--texto); background: var(--superficie); }
+  nav button[aria-current="page"] { background: var(--superficie); color: var(--texto); }
+  nav button .glifo { font-size: 18px; width: 20px; text-align: center; }
+
+  main {
+    grid-column: 2;
+    grid-row: 2;
+    padding: 26px 32px 40px;
+  }
+
+  /* Sin esto, en un monitor salen tarjetas de metro y medio con tres
+     palabras dentro. */
+  main > * { max-width: 1080px; }
+  main > .doble { max-width: none; }
+
+  .tarjeta { padding: 18px 20px; }
+  .vacio { margin-top: 4vh; }
+}
+
+/* ---------- Consulta a dos paneles ---------- */
+
+.doble {
+  display: grid;
+  grid-template-columns: minmax(300px, 380px) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+  height: 100%;
+}
+
+.doble__izq,
+.doble__der {
+  min-width: 0;
+  max-height: calc(100vh - 150px);
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.doble__der { border-left: 1px solid var(--linea); padding-left: 24px; }
+
+/* ---------- Tarjetas en columnas en monitores grandes ---------- */
+
+@media (min-width: 1200px) {
+  main.rejilla {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+    align-content: start;
+    gap: 0 20px;
+    max-width: 1280px;
+  }
+
+  main.rejilla > * { max-width: none; }
+
+  /* Lo que ordena la pantalla ocupa el ancho completo: los selectores de
+     sección y los avisos no deben quedar en una columna suelta. */
+  main.rejilla > .segmentos,
+  main.rejilla > #mirando,
+  main.rejilla > .aviso { grid-column: 1 / -1; }
+}
+
+/* ---------- Ratón: pistas que en táctil no existen ---------- */
+
+@media (hover: hover) {
+  .boton:hover:not(:disabled) { border-color: var(--acento); }
+  .fila--paciente:hover,
+  .fila--logro:hover,
+  .buscador__fila:hover { background: #22262c; }
+  .chip:hover { border-color: var(--acento); }
+}
+
+/* ---------- Que nada pise a nada ----------
+   Los desbordes no se ven en el navegador de escritorio y luego aparecen con
+   un nombre largo o una pantalla estrecha. Estas reglas los cortan en origen. */
+
+header h1 {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+header .iconico { flex: 0 0 auto; white-space: nowrap; }
+
+/* Nombres largos de alimento o de paciente: se recortan, no empujan. */
+.buscador__fila .fila__texto b,
+.buscador__fila .fila__texto em {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.buscador__elegido .etiqueta { min-width: 0; overflow-wrap: anywhere; }
+
+/* La etiqueta del cuadre se adapta al idioma en vez de recortarse a ciegas. */
+.cuadre__fila { grid-template-columns: minmax(58px, auto) minmax(40px, 1fr) auto; }
+
+/* Los chips de plantillas y las listas de comidas envuelven en vez de salirse. */
+.chips { flex-wrap: wrap; }
+.fila--item .fila__texto em { overflow-wrap: anywhere; white-space: normal; }
+
+/* En la ficha a dos paneles, el alto se calcula desde la cabecera real. */
+@media (min-width: 900px) {
+  .doble__izq,
+  .doble__der { max-height: calc(100vh - 140px); }
+  .doble { grid-template-columns: minmax(280px, 34%) minmax(0, 1fr); }
+}

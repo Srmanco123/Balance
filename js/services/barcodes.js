@@ -76,3 +76,50 @@ export function paraCantidad(por100, gramos) {
     fibra: red(por100.fibra)
   };
 }
+
+// Búsqueda por nombre. Es el tercer recurso, después de la tabla genérica y de
+// la biblioteca de la consulta: aquí lo que hay es catálogo de supermercado,
+// así que escribir "merluza" devuelve sobre todo congelados con marca.
+//
+// Lleva un límite de tiempo propio porque este endpoint es bastante más lento
+// que el de código de barras y no merece la pena bloquear la interfaz por él.
+const BUSQUEDA = "https://world.openfoodfacts.org/cgi/search.pl";
+
+export async function buscarTexto(texto, cuantos = 8, milisegundos = 7000) {
+  const termino = String(texto || "").trim();
+  if (termino.length < 3) return [];
+
+  const url =
+    `${BUSQUEDA}?search_terms=${encodeURIComponent(termino)}` +
+    `&search_simple=1&action=process&json=1&page_size=${cuantos}` +
+    `&fields=code,product_name,product_name_es,brands,nutriments`;
+
+  const corte = new AbortController();
+  const reloj = setTimeout(() => corte.abort(), milisegundos);
+
+  try {
+    const respuesta = await fetch(url, { signal: corte.signal });
+    if (!respuesta.ok) return [];
+    const datos = await respuesta.json();
+
+    return (datos.products || [])
+      .map((p) => {
+        const macros = porCien(p.nutriments || {});
+        if (macros.kcal === null) return null;
+        return {
+          ean: p.code || null,
+          nombre: p.product_name_es || p.product_name || "Sin nombre",
+          marca: (p.brands || "").split(",")[0].trim(),
+          por100: macros,
+          origen: "off"
+        };
+      })
+      .filter(Boolean);
+  } catch (error) {
+    // Sin conexión o se ha agotado el tiempo: no es un fallo, simplemente no
+    // hay resultados de esta fuente.
+    return [];
+  } finally {
+    clearTimeout(reloj);
+  }
+}

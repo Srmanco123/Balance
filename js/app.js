@@ -54,6 +54,14 @@ const cabecera = document.querySelector("header");
 let actual = null;
 let lado = "paciente";
 
+// El corte por ancho de ventana, no por dispositivo: una tablet girada o una
+// ventana a media pantalla engañan a cualquier detección por navegador.
+const ANCHA = window.matchMedia("(min-width: 900px)");
+const REJILLA = window.matchMedia("(min-width: 1200px)");
+
+let montadas = [];
+let fichaAbierta = null;
+
 // El conmutador se crea aquí y no en index.html: solo existe para quien es
 // profesional y además tiene ficha propia.
 const botonLado = document.createElement("button");
@@ -118,21 +126,84 @@ function pintarMirando() {
   });
 }
 
-function ir(nombre) {
-  const vista = VISTAS[nombre];
-  if (!vista) return;
-  if (actual && VISTAS[actual].unmount) VISTAS[actual].unmount();
-  actual = nombre;
-  rotulo.textContent = vista.titulo;
-  caja.innerHTML = "";
-  vista.mount(caja);
-  if (nombre !== "consola" && nombre !== "dietas") pintarMirando();
-  caja.scrollTop = 0;
+// En pantalla ancha la consulta se ve entera: lista a la izquierda y ficha a
+// la derecha. Es el único sitio donde el ancho cambia la navegación y no solo
+// la presentación.
+function partida(nombre) {
+  return ANCHA.matches && lado === "pro" && (nombre === "consola" || nombre === "paciente");
+}
+
+function desmontar(cuales) {
+  const lista = cuales || montadas.slice();
+  lista.forEach((n) => {
+    if (VISTAS[n].unmount) VISTAS[n].unmount();
+    montadas = montadas.filter((m) => m !== n);
+  });
+}
+
+function montar(nombre, zona) {
+  VISTAS[nombre].mount(zona);
+  montadas.push(nombre);
+}
+
+// Repinta solo la ficha, dejando la lista de pacientes montada y con su
+// posición de scroll.
+function pintarFicha() {
+  const der = caja.querySelector("#ladoDer");
+  if (!der) return;
+
+  desmontar(["paciente"]);
+  der.innerHTML = "";
+
+  if (!fichaAbierta) {
+    der.innerHTML = `<p class="vacio">Elige un paciente de la lista para ver su ficha,
+      pautarle el objetivo y publicarle el menú.</p>`;
+    return;
+  }
+  montar("paciente", der);
+}
+
+function marcarBarra() {
   barra.querySelectorAll("button").forEach((boton) => {
-    if (boton.dataset.vista === nombre) boton.setAttribute("aria-current", "page");
+    if (boton.dataset.vista === actual) boton.setAttribute("aria-current", "page");
     else boton.removeAttribute("aria-current");
   });
 }
+
+function ir(nombre) {
+  const vista = VISTAS[nombre];
+  if (!vista) return;
+
+  desmontar();
+  caja.innerHTML = "";
+  caja.classList.remove("rejilla");
+
+  if (partida(nombre)) {
+    actual = "consola";
+    rotulo.textContent = "Consulta";
+    caja.innerHTML = `<div class="doble">
+        <div class="doble__izq" id="ladoIzq"></div>
+        <div class="doble__der" id="ladoDer"></div>
+      </div>`;
+    montar("consola", caja.querySelector("#ladoIzq"));
+    pintarFicha();
+  } else {
+    actual = nombre;
+    rotulo.textContent = vista.titulo;
+    // A partir de cierto ancho las tarjetas se reparten en columnas en vez de
+    // estirarse hasta ocupar un monitor entero.
+    if (REJILLA.matches) caja.classList.add("rejilla");
+    montar(nombre, caja);
+    if (nombre !== "consola" && nombre !== "dietas") pintarMirando();
+  }
+
+  caja.scrollTop = 0;
+  marcarBarra();
+}
+
+// Al girar la tablet o cambiar el tamaño de la ventana se recoloca sola.
+ANCHA.addEventListener("change", () => actual && ir(actual));
+REJILLA.addEventListener("change", () => actual && ir(actual));
 
 document.querySelector("#entrar").addEventListener("click", async (evento) => {
   const boton = evento.currentTarget;
@@ -156,7 +227,9 @@ document.addEventListener("balance:ir", (evento) => ir(evento.detail));
 // La consola pide abrir una ficha: fija el sujeto y entra en la vista.
 document.addEventListener("balance:abrirPaciente", (evento) => {
   mirar(evento.detail);
-  ir("paciente");
+  fichaAbierta = evento.detail;
+  if (partida("consola")) pintarFicha();
+  else ir("paciente");
 });
 
 resultadoRedireccion().catch((error) => {
@@ -206,6 +279,7 @@ async function arrancar() {
   rotulo.textContent = perfil.titulo;
   actual = "perfil";
   caja.innerHTML = "";
+  montadas = ["perfil"];
   perfil.mount(caja, () => {
     barra.classList.remove("oculto");
     ir("hoy");
@@ -223,8 +297,9 @@ alCambiarSesion((u) => {
       });
     }
   } else {
-    if (actual && VISTAS[actual].unmount) VISTAS[actual].unmount();
+    desmontar();
     actual = null;
+    fichaAbierta = null;
     cerrar();
     aplicacion.classList.add("oculto");
     acceso.classList.remove("oculto");

@@ -14,11 +14,14 @@ import {
   leerMensajes,
   enviarMensaje,
   leerLogros,
-  guardarLogro
+  guardarLogro,
+  leerBiblioteca,
+  guardarAlimento
 } from "../data/repo.js";
 import { sujeto } from "../data/sesion.js";
 import { repartoMacros } from "../core/formulas.js";
 import { tendenciaActual, ritmoSemanal } from "../core/tendencia.js";
+import { montarBuscador } from "../ui/buscadorAlimentos.js";
 
 export const titulo = "Ficha";
 
@@ -42,6 +45,7 @@ let ficha = null;
 let perfil = null;
 let menu = null;
 let pesos = [];
+let biblioteca = [];
 let sub = "objetivo";
 
 // app.js la usa para el aviso de "estás viendo la ficha de…".
@@ -66,20 +70,23 @@ export function unmount() {
   perfil = null;
   menu = null;
   pesos = [];
+  biblioteca = [];
 }
 
 async function cargar() {
   const s = sujeto();
-  const [f, pf, mn, ps] = await Promise.all([
+  const [f, pf, mn, ps, bib] = await Promise.all([
     leerPaciente(s),
     leerPerfil(s),
     leerMenu(s),
-    leerPesos(s, 60)
+    leerPesos(s, 60),
+    leerBiblioteca().catch(() => [])
   ]);
   ficha = f || { nombre: "Sin nombre" };
   perfil = pf;
   menu = mn || JSON.parse(JSON.stringify(MENU_VACIO));
   pesos = ps;
+  biblioteca = bib;
   pintar();
 }
 
@@ -91,11 +98,35 @@ function objetivoVigente() {
   return (perfil && perfil.objetivoKcal) || null;
 }
 
-function kcalMenu() {
-  return menu.comidas.reduce(
-    (t, c) => t + c.items.reduce((s, i) => s + (Number(i.kcal) || 0), 0),
-    0
-  );
+// Suma del menú y objetivo en macros, para poder cuadrar los dos.
+function totalesMenu() {
+  const t = { kcal: 0, proteina: 0, hidratos: 0, grasa: 0 };
+  for (const c of menu.comidas) {
+    for (const i of c.items) {
+      t.kcal += Number(i.kcal) || 0;
+      t.proteina += Number(i.proteina) || 0;
+      t.hidratos += Number(i.hidratos) || 0;
+      t.grasa += Number(i.grasa) || 0;
+    }
+  }
+  return {
+    kcal: Math.round(t.kcal),
+    proteina: Math.round(t.proteina),
+    hidratos: Math.round(t.hidratos),
+    grasa: Math.round(t.grasa)
+  };
+}
+
+// El objetivo en gramos sale del mismo reparto que ve el paciente en Hoy.
+function objetivoMacros() {
+  const peso = pesoRef();
+  const kcal = objetivoVigente();
+  if (!peso || !kcal) return null;
+  return repartoMacros(kcal, {
+    peso,
+    proteinaPorKilo: (perfil && perfil.proteinaPorKilo) || 2,
+    grasaPorKilo: (perfil && perfil.grasaPorKilo) || 0.8
+  });
 }
 
 function pintar() {
@@ -244,9 +275,9 @@ function pintarObjetivo(zona) {
 /* ---------------- Menú ---------------- */
 
 function pintarMenu(zona) {
-  const kc = kcalMenu();
+  const t = totalesMenu();
   const obj = objetivoVigente();
-  const desvio = obj ? kc - obj : null;
+  const objM = objetivoMacros();
   const flex = menu.rigidez === "flexible";
 
   zona.innerHTML = `
@@ -270,7 +301,7 @@ function pintarMenu(zona) {
         (c, ci) => `
       <div class="tarjeta">
         <div class="ingrediente__cabeza">
-          <b>${c.nombre}</b><span class="etiqueta">${c.hora}</span>
+          <b>${c.nombre}</b><span class="etiqueta">${c.hora} · ${kcalDe(c)} kcal</span>
         </div>
         ${
           c.items.length
@@ -279,7 +310,11 @@ function pintarMenu(zona) {
                   (i, ii) => `<div class="fila fila--item">
               <span class="fila__texto"><b>${i.alimento}</b>
                 <em>${flex ? "ración" : (i.g || 0) + " g"}${
-                    flex || !i.kcal ? "" : " · " + i.kcal + " kcal"
+                    i.kcal ? ` · ${i.kcal} kcal` : ""
+                  }${
+                    i.proteina != null
+                      ? ` · P ${i.proteina} · H ${i.hidratos} · G ${i.grasa}`
+                      : ""
                   }</em></span>
               <button class="iconico" data-quitar="${ci}:${ii}" aria-label="Quitar">×</button>
             </div>`
@@ -287,12 +322,7 @@ function pintarMenu(zona) {
                 .join("")
             : `<p class="vacio">Sin alimentos.</p>`
         }
-        <div class="campo campo--linea">
-          <input data-al="${ci}" type="text" placeholder="Alimento">
-          <input data-g="${ci}" type="number" inputmode="numeric" placeholder="g" min="0">
-          <input data-k="${ci}" type="number" inputmode="numeric" placeholder="kcal" min="0">
-          <button class="boton" data-añadir="${ci}">Añadir</button>
-        </div>
+        <div data-buscador="${ci}"></div>
         ${
           menu.rigidez !== "exacto"
             ? `<label class="campo">Intercambio permitido
@@ -307,21 +337,26 @@ function pintarMenu(zona) {
 
     <div class="tarjeta">
       <button class="boton" id="añadirComida">Añadir comida</button>
-      <p class="titulillo" style="margin-top:16px">Cuadre</p>
-      <p class="cifra numero">${kc}<span> kcal en el menú</span></p>
-      <p class="nota">${
-        obj
-          ? Math.abs(desvio) <= 120
-            ? `Cuadra con el objetivo de ${obj} kcal.`
-            : `Desvío de ${desvio > 0 ? "+" : ""}${desvio} kcal sobre el objetivo de ${obj}.`
-          : "Este paciente no tiene objetivo pautado todavía."
-      }</p>
+
+      <p class="titulillo" style="margin-top:16px">Cuadre del día</p>
+      <div class="cuadre">
+        ${barraCuadre("Calorías", t.kcal, obj, "kcal", "var(--acento)")}
+        ${
+          objM
+            ? barraCuadre("Proteína", t.proteina, objM.proteina, "g", "var(--proteina)") +
+              barraCuadre("Hidratos", t.hidratos, objM.hidratos, "g", "var(--hidratos)") +
+              barraCuadre("Grasa", t.grasa, objM.grasa, "g", "var(--grasa)")
+            : `<p class="nota">Para cuadrar los macros hace falta el objetivo pautado y un
+               peso de referencia del paciente.</p>`
+        }
+      </div>
       ${
         flex
-          ? `<p class="nota">En guía flexible las kcal del menú son orientativas: al paciente
-             no se le muestran.</p>`
+          ? `<p class="nota">En guía flexible las cantidades son orientativas: al paciente no
+             se le muestran los gramos.</p>`
           : ""
       }
+
       <button class="boton boton--principal" id="publicarMenu">Publicar el menú</button>
       <div class="campo campo--linea" style="margin-top:12px">
         <input id="nombrePlantilla" type="text" placeholder="Nombre de la plantilla">
@@ -330,6 +365,21 @@ function pintarMenu(zona) {
       <div class="campo" id="desdePlantilla"></div>
       <p class="nota" id="avisoMenu"></p>
     </div>`;
+
+  // Un buscador por comida. Se monta después de pintar porque necesita sus
+  // propios nodos ya en el documento.
+  zona.querySelectorAll("[data-buscador]").forEach((hueco) => {
+    const ci = Number(hueco.dataset.buscador);
+    montarBuscador({
+      destino: hueco,
+      biblioteca,
+      alAñadir: (item) => {
+        menu.comidas[ci].items.push(item);
+        pintar();
+      },
+      alGuardarNuevo: (alimento) => guardarAlimento(alimento)
+    });
+  });
 
   zona.querySelectorAll("[data-rig]").forEach((b) =>
     b.addEventListener("click", () => {
@@ -342,20 +392,6 @@ function pintarMenu(zona) {
     b.addEventListener("click", () => {
       const [ci, ii] = b.dataset.quitar.split(":").map(Number);
       menu.comidas[ci].items.splice(ii, 1);
-      pintar();
-    })
-  );
-
-  zona.querySelectorAll("[data-añadir]").forEach((b) =>
-    b.addEventListener("click", () => {
-      const ci = Number(b.dataset.añadir);
-      const al = zona.querySelector(`[data-al="${ci}"]`).value.trim();
-      if (!al) return;
-      menu.comidas[ci].items.push({
-        alimento: al,
-        g: Number(zona.querySelector(`[data-g="${ci}"]`).value) || 0,
-        kcal: Number(zona.querySelector(`[data-k="${ci}"]`).value) || 0
-      });
       pintar();
     })
   );
@@ -399,7 +435,6 @@ function pintarMenu(zona) {
     }
   });
 
-  // Cargar una plantilla existente sobre este paciente.
   leerDietas()
     .then((dietas) => {
       const destino = zona.querySelector("#desdePlantilla");
@@ -411,12 +446,43 @@ function pintarMenu(zona) {
       destino.querySelectorAll("[data-cargar]").forEach((b) =>
         b.addEventListener("click", () => {
           const d = dietas.find((x) => x.id === b.dataset.cargar);
-          menu = { rigidez: d.rigidez || "intercambio", comidas: JSON.parse(JSON.stringify(d.comidas || [])) };
+          menu = {
+            rigidez: d.rigidez || "intercambio",
+            comidas: JSON.parse(JSON.stringify(d.comidas || []))
+          };
           pintar();
         })
       );
     })
     .catch(() => {});
+}
+
+function kcalDe(comida) {
+  return Math.round(comida.items.reduce((s, i) => s + (Number(i.kcal) || 0), 0));
+}
+
+// Barra de cuadre: verde dentro del margen, ámbar cerca, rojo fuera. El margen
+// es del 10% para macros y de 120 kcal para las calorías, que es más o menos
+// lo que un menú real se puede desviar sin que importe.
+function barraCuadre(titulo, valor, objetivo, unidad, color) {
+  if (!objetivo) {
+    return `<div class="cuadre__fila">
+      <span class="etiqueta">${titulo}</span>
+      <span class="numero">${valor} ${unidad}</span>
+    </div>`;
+  }
+
+  const desvio = valor - objetivo;
+  const margen = unidad === "kcal" ? 120 : Math.max(5, objetivo * 0.1);
+  const estado =
+    Math.abs(desvio) <= margen ? "bien" : Math.abs(desvio) <= margen * 2 ? "ojo" : "mal";
+  const ancho = Math.min(100, objetivo ? (valor / objetivo) * 100 : 0);
+
+  return `<div class="cuadre__fila">
+    <span class="etiqueta">${titulo}</span>
+    <span class="mecha"><i style="width:${ancho}%;background:${color}"></i></span>
+    <span class="numero cuadre__${estado}">${valor} / ${objetivo} ${unidad}</span>
+  </div>`;
 }
 
 /* ---------------- Mensajes ---------------- */
